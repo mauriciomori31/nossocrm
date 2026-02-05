@@ -32,6 +32,19 @@ export function createClient(): SupabaseClient | null {
     return _supabase
 }
 
+/**
+ * Get Supabase client with guaranteed non-null return.
+ * Throws an error if Supabase is not configured.
+ * Use this in queryFn and mutationFn where you need a non-nullable client.
+ */
+export function getClient(): SupabaseClient {
+    const client = createClient()
+    if (!client) {
+        throw new Error('Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY')
+    }
+    return client
+}
+
 // Alias for backward compatibility
 // Importante: em ambientes devidamente configurados, `createClient()` nunca deve retornar null.
 // Mantemos o retorno `SupabaseClient | null` em `createClient` para permitir uma mensagem

@@ -79,3 +79,59 @@ export {
   useMoveDeal,
   useMoveDealSimple,
 } from './useMoveDeal';
+
+// =============================================================================
+// MESSAGING MODULE
+// =============================================================================
+
+// Business Units
+export {
+  useBusinessUnits,
+  useBusinessUnitsWithCounts,
+  useBusinessUnit,
+  useBusinessUnitMembers,
+  useCreateBusinessUnit,
+  useUpdateBusinessUnit,
+  useDeleteBusinessUnit,
+  useAddBusinessUnitMembers,
+  useRemoveBusinessUnitMembers,
+} from './useBusinessUnitsQuery';
+
+// Messaging Channels
+export {
+  useMessagingChannels,
+  useMessagingChannelsByUnit,
+  useMessagingChannelsByType,
+  useConnectedChannels,
+  useMessagingChannel,
+  useCreateMessagingChannel,
+  useUpdateMessagingChannel,
+  useUpdateChannelStatus,
+  useDeleteMessagingChannel,
+} from './useMessagingChannelsQuery';
+
+// Messaging Conversations
+export {
+  useMessagingConversations,
+  useConversationsByChannel,
+  useConversationsByContact,
+  useMessagingConversation,
+  useUnreadConversationCount,
+  useUpdateConversation,
+  useMarkConversationRead,
+  useResolveConversation,
+  useReopenConversation,
+  useAssignConversation,
+  useLinkConversationToContact,
+} from './useMessagingConversationsQuery';
+
+// Messaging Messages
+export {
+  useMessagingMessages,
+  useMessagingMessagesInfinite,
+  useMessagingMessage,
+  useSendMessage,
+  useSendTextMessage,
+  useUpdateMessageStatus,
+  useRetryMessage,
+} from './useMessagingMessagesQuery';
