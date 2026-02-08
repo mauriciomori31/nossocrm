@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, Mail, Phone, Plus, Calendar, Pencil, Trash2, Globe, MoreHorizontal, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Building2, Mail, Phone, Plus, Calendar, Pencil, Trash2, Globe, MoreHorizontal, ArrowUpDown, ArrowUp, ArrowDown, GitMerge } from 'lucide-react';
 import { Contact, Company, ContactSortableColumn } from '@/types';
 import { StageBadge } from './ContactsStageTabs';
 
@@ -89,6 +89,8 @@ interface ContactsListProps {
     sortBy?: ContactSortableColumn;
     sortOrder?: 'asc' | 'desc';
     onSort?: (column: ContactSortableColumn) => void;
+    // Duplicate detection
+    duplicateContactIds?: Set<string>;
 }
 
 /**
@@ -147,6 +149,7 @@ export const ContactsList: React.FC<ContactsListProps> = ({
     sortBy = 'created_at',
     sortOrder = 'desc',
     onSort,
+    duplicateContactIds,
 }) => {
     const activeListIds = viewMode === 'people'
         ? filteredContacts.map(c => c.id)
@@ -236,7 +239,15 @@ export const ContactsList: React.FC<ContactsListProps> = ({
                                                 {(contact.name || '?').charAt(0)}
                                             </button>
                                             <div>
-                                                <span className="font-semibold text-slate-900 dark:text-white block">{contact.name}</span>
+                                                <span className="font-semibold text-slate-900 dark:text-white block">
+                                                    {contact.name}
+                                                    {duplicateContactIds?.has(contact.id) && (
+                                                        <span className="inline-flex items-center gap-1 ml-2 px-1.5 py-0.5 text-[10px] font-bold bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded-full align-middle">
+                                                            <GitMerge size={10} />
+                                                            Duplicado
+                                                        </span>
+                                                    )}
+                                                </span>
                                             </div>
                                         </div>
                                     </td>

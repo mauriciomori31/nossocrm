@@ -144,6 +144,14 @@ export {
   useSendTemplateMutation,
 } from './useTemplatesQuery';
 
+// Contact Duplicates & Merge
+export {
+  useDuplicateContactsQuery,
+  useMergeContactsMutation,
+  type DuplicateGroup,
+  type MergeResult,
+} from './useDuplicateContactsQuery';
+
 // Messaging Metrics
 export {
   useMessagingMetricsQuery,

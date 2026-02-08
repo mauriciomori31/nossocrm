@@ -12,6 +12,9 @@ import { CompanyFormModal } from './components/CompanyFormModal';
 import { SelectBoardModal } from './components/SelectBoardModal';
 import { PaginationControls } from './components/PaginationControls';
 import { ContactsImportExportModal } from './components/ContactsImportExportModal';
+import { DuplicatesBanner } from './components/DuplicatesBanner';
+import { MergeContactsModal } from './components/MergeContactsModal';
+import { useDuplicateContactsQuery, useMergeContactsMutation } from '@/lib/query/hooks';
 import ConfirmModal from '@/components/ConfirmModal';
 
 /**
@@ -22,6 +25,18 @@ export const ContactsPage: React.FC = () => {
     const controller = useContactsController();
     const router = useRouter();
     const [isImportExportOpen, setIsImportExportOpen] = React.useState(false);
+    const [isMergeModalOpen, setIsMergeModalOpen] = React.useState(false);
+
+    const { data: duplicateGroups = [] } = useDuplicateContactsQuery();
+    const mergeMutation = useMergeContactsMutation();
+
+    const duplicateContactIds = React.useMemo(() => {
+        const ids = new Set<string>();
+        for (const group of duplicateGroups) {
+            for (const id of group.contact_ids) ids.add(id);
+        }
+        return ids;
+    }, [duplicateGroups]);
 
     const goToDeal = (dealId: string) => {
         controller.setDeleteWithDeals(null);
@@ -69,6 +84,13 @@ export const ContactsPage: React.FC = () => {
                 onStageChange={controller.setStageFilter}
                 counts={controller.stageCounts}
             />
+
+            {duplicateGroups.length > 0 && (
+                <DuplicatesBanner
+                    count={duplicateGroups.length}
+                    onResolve={() => setIsMergeModalOpen(true)}
+                />
+            )}
 
             <ContactsTabs
                 viewMode={controller.viewMode}
@@ -121,6 +143,7 @@ export const ContactsPage: React.FC = () => {
                 sortBy={controller.sortBy}
                 sortOrder={controller.sortOrder}
                 onSort={controller.handleSort}
+                duplicateContactIds={duplicateContactIds}
             />
 
             {/* T021: Pagination Controls */}
@@ -233,6 +256,14 @@ export const ContactsPage: React.FC = () => {
                 }
                 confirmText={`Excluir ${controller.selectedIds.size} ${controller.viewMode === 'people' ? 'contato(s)' : 'empresa(s)'}`}
                 variant="danger"
+            />
+
+            <MergeContactsModal
+                isOpen={isMergeModalOpen}
+                onClose={() => setIsMergeModalOpen(false)}
+                groups={duplicateGroups}
+                contacts={controller.contacts}
+                onMerge={(sourceId, targetId) => mergeMutation.mutateAsync({ sourceId, targetId })}
             />
         </div>
     );

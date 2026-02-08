@@ -514,13 +514,15 @@ async function handleInboundMessage(
   } else {
     isNewConversation = true;
 
-    // Try to find existing contact by phone
+    // Try to find existing contact by phone (order+limit to handle duplicates)
     const { data: existingContact } = await supabase
       .from("contacts")
       .select("id")
       .eq("organization_id", channel.organization_id)
       .eq("phone", phone)
       .is("deleted_at", null)
+      .order("created_at")
+      .limit(1)
       .maybeSingle();
 
     if (existingContact) {

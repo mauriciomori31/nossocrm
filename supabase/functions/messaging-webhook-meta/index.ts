@@ -703,13 +703,15 @@ async function handleInboundMessage(
     conversationId = existingConv.id;
     contactId = existingConv.contact_id;
   } else {
-    // Try to find existing contact by phone
+    // Try to find existing contact by phone (order+limit to handle duplicates)
     const { data: existingContact } = await supabase
       .from("contacts")
       .select("id")
       .eq("organization_id", channel.organization_id)
       .eq("phone", phone)
       .is("deleted_at", null)
+      .order("created_at")
+      .limit(1)
       .maybeSingle();
 
     if (existingContact) {
@@ -1215,13 +1217,15 @@ async function handleInstagramInboundMessage(
     conversationId = existingConv.id;
     contactId = existingConv.contact_id;
   } else {
-    // Instagram doesn't expose phone/email — lookup by IGSID in metadata
+    // Instagram doesn't expose phone/email — lookup by IGSID in metadata (order+limit to handle duplicates)
     const { data: existingContact } = await supabase
       .from("contacts")
       .select("id")
       .eq("organization_id", channel.organization_id)
       .contains("metadata", { instagram_id: senderId })
       .is("deleted_at", null)
+      .order("created_at")
+      .limit(1)
       .maybeSingle();
 
     if (existingContact) {

@@ -15,6 +15,7 @@ import {
   ChevronUp,
   LinkIcon,
   MessageSquare,
+  GitMerge,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -31,6 +32,8 @@ interface ContactPanelProps {
   onLinkContact?: () => void;
   onViewContact?: (contactId: string) => void;
   onViewDeals?: (contactId: string) => void;
+  hasDuplicate?: boolean;
+  onResolveDuplicate?: () => void;
   className?: string;
 }
 
@@ -91,6 +94,8 @@ export const ContactPanel = memo(function ContactPanel({
   onLinkContact,
   onViewContact,
   onViewDeals,
+  hasDuplicate,
+  onResolveDuplicate,
   className,
 }: ContactPanelProps) {
   if (isLoading) {
@@ -185,6 +190,16 @@ export const ContactPanel = memo(function ContactPanel({
                 </span>
               )}
               <WindowExpiryBadge windowExpiresAt={windowExpiresAt} variant="inline" />
+              {hasDuplicate && (
+                <button
+                  type="button"
+                  onClick={onResolveDuplicate}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-500/20 transition-colors"
+                >
+                  <GitMerge className="w-3 h-3" />
+                  Duplicado
+                </button>
+              )}
             </div>
           </div>
         </div>

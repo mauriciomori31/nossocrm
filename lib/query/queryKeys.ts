@@ -111,6 +111,14 @@ export const queryKeys = {
     })),
 
     /**
+     * Contact duplicates query keys.
+     */
+    contactDuplicates: {
+        all: ['contactDuplicates'] as const,
+        list: (orgId: string) => ['contactDuplicates', orgId] as const,
+    },
+
+    /**
      * Messaging metrics query keys.
      */
     messagingMetrics: {
