@@ -147,6 +147,8 @@ export const queryKeys = {
         pendingAdvances: (dealId?: string) => ['ai', 'pendingAdvances', dealId] as const,
         /** Pending advances count */
         pendingAdvanceCount: () => ['ai', 'pendingAdvances', 'count'] as const,
+        /** Meeting briefing for a deal */
+        briefing: (dealId: string) => ['ai', 'briefing', dealId] as const,
     },
 
     /**

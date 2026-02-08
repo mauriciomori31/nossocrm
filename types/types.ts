@@ -238,6 +238,7 @@ export interface Deal {
   customFields?: Record<string, any>; // Dynamic fields storage
   lastStageChangeDate?: string; // For stagnation tracking
   lossReason?: string; // For win/loss analysis
+  aiExtracted?: Record<string, any>; // AI-extracted BANT fields (zero config)
 
   // @deprecated - Use clientCompanyId instead
   companyId?: string;

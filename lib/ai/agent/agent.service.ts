@@ -14,6 +14,7 @@ import { AI_DEFAULT_MODELS, AI_DEFAULT_PROVIDER } from '../defaults';
 import { buildLeadContext, formatContextForPrompt } from './context-builder';
 import { getChannelRouter } from '@/lib/messaging/channel-router.service';
 import { evaluateStageAdvancement } from './stage-evaluator';
+import { extractAndUpdateBANT } from '../extraction/extraction.service';
 import type {
   StageAIConfig,
   LeadContext,
@@ -295,7 +296,18 @@ export async function processIncomingMessage(
       decision,
     });
 
-    // 12. Avaliar avanço de estágio (após resposta bem-sucedida)
+    // 12. Extrair campos BANT automaticamente (fire-and-forget)
+    extractAndUpdateBANT({
+      supabase,
+      dealId,
+      conversationId,
+      organizationId,
+      triggerMessageId: messageId,
+    }).catch((err) => {
+      console.error('[AIAgent] BANT extraction failed:', err);
+    });
+
+    // 13. Avaliar avanço de estágio (após resposta bem-sucedida)
     let stageAdvanced = false;
     let newStageId: string | undefined;
 

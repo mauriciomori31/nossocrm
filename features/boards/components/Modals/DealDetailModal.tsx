@@ -35,11 +35,14 @@ import {
   Tag as TagIcon,
   Plus,
   MessageSquare,
+  FileText,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { StageProgressBar } from '../StageProgressBar';
 import { ActivityRow } from '@/features/activities/components/ActivityRow';
 import { formatPriorityPtBr } from '@/lib/utils/priority';
+import { BriefingDrawer } from '@/features/deals/components/BriefingDrawer';
+import { AIExtractedFields } from '@/features/deals/components/AIExtractedFields';
 
 interface DealDetailModalProps {
   dealId: string | null;
@@ -132,6 +135,7 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
   const [showLossReasonModal, setShowLossReasonModal] = useState(false);
   const [pendingLostStageId, setPendingLostStageId] = useState<string | null>(null);
   const [lossReasonOrigin, setLossReasonOrigin] = useState<'button' | 'stage'>('button');
+  const [showBriefingDrawer, setShowBriefingDrawer] = useState(false);
 
   // Tags suggestions (local for now; Settings UI writes to the same key)
   const [availableTags, setAvailableTags] = usePersistedState<string[]>('crm_tags', []);
@@ -159,6 +163,7 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
       setPendingLostStageId(null);
       setLossReasonOrigin('button');
       setTagQuery('');
+      setShowBriefingDrawer(false);
     }
   }, [isOpen, dealId]); // Depend on dealId to reset when switching deals
 
@@ -544,6 +549,14 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
                   </>
                 )}
                 <button
+                  onClick={() => setShowBriefingDrawer(true)}
+                  className="ml-2 px-3 py-1.5 bg-primary-100 dark:bg-primary-500/20 text-primary-700 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-primary-500/30 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5"
+                  title="Preparar para a conversa com este lead"
+                >
+                  <FileText size={14} />
+                  <span className="hidden sm:inline">Preparar</span>
+                </button>
+                <button
                   onClick={() => setDeleteId(deal.id)}
                   className="ml-2 text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                   title="Excluir Negócio"
@@ -755,6 +768,14 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* AI EXTRACTED FIELDS (Zero Config BANT) */}
+                <div className="pt-4 border-t border-slate-100 dark:border-white/5">
+                  <AIExtractedFields
+                    data={deal.aiExtracted as import('@/lib/ai/extraction/schemas').AIExtractedData | undefined}
+                    compact
+                  />
                 </div>
 
                 {/* DYNAMIC CUSTOM FIELDS INPUTS */}
@@ -1232,6 +1253,13 @@ export const DealDetailModal: React.FC<DealDetailModalProps> = ({ dealId, isOpen
             if (lossReasonOrigin === 'button') onClose();
           }}
           dealTitle={deal.title}
+        />
+
+        <BriefingDrawer
+          dealId={deal.id}
+          dealTitle={deal.title}
+          isOpen={showBriefingDrawer}
+          onClose={() => setShowBriefingDrawer(false)}
         />
     </>
   );

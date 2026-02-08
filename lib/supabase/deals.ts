@@ -100,6 +100,8 @@ export interface DbDeal {
   is_lost: boolean;
   /** Data de fechamento. */
   closed_at: string | null;
+  /** AI-extracted BANT fields (zero config). */
+  ai_extracted: Record<string, any> | null;
 }
 
 /**
@@ -172,6 +174,7 @@ const transformDeal = (db: DbDeal | DbDealWithItems, items?: DbDealItem[]): Deal
     tags: db.tags || [],
     lastStageChangeDate: db.last_stage_change_date || undefined,
     customFields: db.custom_fields || {},
+    aiExtracted: db.ai_extracted || undefined,
     createdAt: db.created_at,
     updatedAt: db.updated_at,
     items: filteredItems.map(i => ({
