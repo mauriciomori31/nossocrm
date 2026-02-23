@@ -107,8 +107,11 @@ export const DealsProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (updateError) {
       console.error('Erro ao atualizar deal:', updateError.message);
       // Rollback usando snapshot
-      if (previousDeals) {
+      if (previousDeals !== undefined) {
         queryClient.setQueryData(DEALS_VIEW_KEY, previousDeals);
+      } else {
+        // Cache estava frio — sem snapshot para restaurar, força refetch
+        await queryClient.invalidateQueries({ queryKey: DEALS_VIEW_KEY });
       }
       return;
     }
@@ -132,6 +135,12 @@ export const DealsProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   );
 
   const deleteDeal = useCallback(async (id: string) => {
+    // Cancel background refetches to prevent overwriting optimistic update
+    await queryClient.cancelQueries({ queryKey: DEALS_VIEW_KEY });
+
+    // Snapshot for rollback
+    const previousDeals = queryClient.getQueryData<DealView[]>(DEALS_VIEW_KEY);
+
     // Optimistic update - remove da UI imediatamente
     queryClient.setQueryData<DealView[]>(DEALS_VIEW_KEY, (old = []) =>
       old.filter(deal => deal.id !== id)
@@ -141,8 +150,13 @@ export const DealsProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     if (deleteError) {
       console.error('Erro ao deletar deal:', deleteError.message);
-      // Rollback: invalida para refetch em caso de erro
-      await queryClient.invalidateQueries({ queryKey: queryKeys.deals.all });
+      // Rollback usando snapshot
+      if (previousDeals !== undefined) {
+        queryClient.setQueryData(DEALS_VIEW_KEY, previousDeals);
+      } else {
+        // Cache estava frio — sem snapshot para restaurar, força refetch
+        await queryClient.invalidateQueries({ queryKey: DEALS_VIEW_KEY });
+      }
       return;
     }
 
