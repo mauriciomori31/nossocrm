@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { streamText, tool, ModelMessage, stepCountIs } from 'ai';
 import { z } from 'zod';
 import { useCRM } from '@/context/CRMContext';
+import { useAIConfig } from '@/context/hooks/useCRMSelectors';
 import { useSettings } from '@/context/settings/SettingsContext';
 import { getModel } from '@/lib/ai/config';
 import { Activity, Deal } from '@/types';
@@ -37,9 +38,9 @@ export function useCRMAgent(options: UseCRMAgentOptions = {}) {
     updateDeal,
     addDeal,
     activeBoard,
-    aiApiKey,
   } = useCRM();
 
+  const { aiApiKey } = useAIConfig();
   const { aiProvider, aiModel } = useSettings();
 
   const [messages, setMessages] = useState<AgentMessage[]>([]);

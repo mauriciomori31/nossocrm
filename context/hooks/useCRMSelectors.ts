@@ -70,3 +70,21 @@ export function useCockpitCRM() {
     updateDeal: ctx.updateDeal,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Lifecycle stages — used by Kanban and any component that renders stage names
+// ---------------------------------------------------------------------------
+
+export function useLifecycleStages() {
+  const { lifecycleStages } = useCRM();
+  return lifecycleStages;
+}
+
+// ---------------------------------------------------------------------------
+// AI feature flags — used by AIFeaturesSection to toggle per-feature AI flags
+// ---------------------------------------------------------------------------
+
+export function useAIFeatureFlags() {
+  const { aiFeatureFlags, setAIFeatureFlag } = useCRM();
+  return { aiFeatureFlags, setAIFeatureFlag };
+}

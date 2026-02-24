@@ -28,14 +28,14 @@ import {
   useUpdateAIConfigMutation,
   useProvisionStagesMutation,
 } from '@/lib/query/hooks/useAIConfigQuery';
-import { useCRM } from '@/context/CRMContext';
+import { useAIConfig } from '@/context/hooks/useCRMSelectors';
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function AIAgentConfigSection() {
-  const { aiKeyConfigured } = useCRM();
+  const { aiKeyConfigured } = useAIConfig();
   const { data: config, isLoading, error } = useAIConfigQuery();
   const updateConfig = useUpdateAIConfigMutation();
   const provisionStages = useProvisionStagesMutation();
