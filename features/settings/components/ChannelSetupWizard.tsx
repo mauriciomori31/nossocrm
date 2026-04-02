@@ -777,31 +777,160 @@ function TestStep({
 
 interface CompleteStepProps {
   channelName: string;
+  channelId: string | null;
+  provider: string | null;
   onClose: () => void;
 }
 
-function CompleteStep({ channelName, onClose }: CompleteStepProps) {
+const WEBHOOK_INSTRUCTIONS: Record<string, { label: string; steps: string[]; docsUrl?: string }> = {
+  'z-api': {
+    label: 'Z-API',
+    steps: [
+      'Acesse o painel da Z-API (developer.z-api.io)',
+      'Vá em sua instância → Configurações',
+      'Cole a URL abaixo no campo "Webhook URL"',
+      'Salve as configurações',
+    ],
+    docsUrl: 'https://developer.z-api.io/webhooks/introduction',
+  },
+  'meta-cloud': {
+    label: 'Meta Cloud API',
+    steps: [
+      'Acesse o Meta for Developers (developers.facebook.com)',
+      'Vá no seu App → WhatsApp → Configuração',
+      'Em "Webhook", clique "Editar" e cole a URL abaixo',
+      'No campo "Verify Token", use o token configurado nas credenciais',
+      'Inscreva-se nos campos: messages, message_deliveries, message_reads',
+    ],
+    docsUrl: 'https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/set-up',
+  },
+  'meta': {
+    label: 'Instagram (Meta)',
+    steps: [
+      'Acesse o Meta for Developers (developers.facebook.com)',
+      'Vá no seu App → Messenger → Configurações',
+      'Em "Webhooks", cole a URL abaixo',
+      'Inscreva-se no campo: messages',
+    ],
+    docsUrl: 'https://developers.facebook.com/docs/messenger-platform/webhooks',
+  },
+  'resend': {
+    label: 'Resend',
+    steps: [
+      'Acesse o dashboard do Resend (resend.com)',
+      'Vá em Webhooks → Add Webhook',
+      'Cole a URL abaixo',
+      'Selecione os eventos: email.sent, email.delivered, email.opened, email.bounced',
+    ],
+    docsUrl: 'https://resend.com/docs/dashboard/webhooks/introduction',
+  },
+};
+
+function getWebhookUrl(provider: string, channelId: string): string {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const functionMap: Record<string, string> = {
+    'z-api': 'messaging-webhook-zapi',
+    'meta-cloud': 'messaging-webhook-meta',
+    'meta': 'messaging-webhook-meta',
+    'resend': 'messaging-webhook-resend',
+  };
+  const fn = functionMap[provider] || 'messaging-webhook-zapi';
+  return `${supabaseUrl}/functions/v1/${fn}/${channelId}`;
+}
+
+function CompleteStep({ channelName, channelId, provider, onClose }: CompleteStepProps) {
+  const [copied, setCopied] = React.useState(false);
+  const webhookUrl = channelId && provider ? getWebhookUrl(provider, channelId) : null;
+  const instructions = provider ? WEBHOOK_INSTRUCTIONS[provider] : null;
+
+  const handleCopy = async () => {
+    if (!webhookUrl) return;
+    try {
+      await navigator.clipboard.writeText(webhookUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback
+      const input = document.createElement('input');
+      input.value = webhookUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   return (
-    <div className="text-center py-8 space-y-4">
-      <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-500/10 flex items-center justify-center mx-auto">
-        <CheckCircle className="w-8 h-8 text-green-600" />
+    <div className="py-6 space-y-5">
+      <div className="text-center space-y-3">
+        <div className="w-14 h-14 rounded-full bg-green-100 dark:bg-green-500/10 flex items-center justify-center mx-auto">
+          <CheckCircle className="w-7 h-7 text-green-600" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+            Canal criado!
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            <strong>{channelName}</strong> foi adicionado. Agora configure o webhook.
+          </p>
+        </div>
       </div>
-      <div>
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-          Canal configurado!
-        </h3>
-        <p className="text-sm text-slate-600 dark:text-slate-300">
-          O canal <strong>{channelName}</strong> foi adicionado com sucesso.
-          Você já pode começar a receber mensagens.
-        </p>
+
+      {webhookUrl && instructions && (
+        <div className="space-y-4">
+          <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4 space-y-3">
+            <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              Webhook URL
+            </h4>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-xs bg-slate-100 dark:bg-black/30 rounded-lg px-3 py-2.5 text-slate-700 dark:text-slate-200 break-all font-mono select-all">
+                {webhookUrl}
+              </code>
+              <button
+                onClick={handleCopy}
+                className="shrink-0 p-2.5 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+                title="Copiar URL"
+              >
+                {copied ? <Check size={16} /> : <Copy size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/20 rounded-xl p-4 space-y-2">
+            <h4 className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+              <AlertCircle size={14} />
+              Configure no {instructions.label}
+            </h4>
+            <ol className="text-xs text-amber-800 dark:text-amber-300/80 space-y-1.5 list-decimal list-inside">
+              {instructions.steps.map((s, i) => (
+                <li key={i}>{s}</li>
+              ))}
+            </ol>
+            {instructions.docsUrl && (
+              <a
+                href={instructions.docsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:underline mt-1"
+              >
+                Ver documentação <ExternalLink size={12} />
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="text-center pt-2">
+        <button
+          onClick={onClose}
+          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold
+            bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+        >
+          Concluir
+        </button>
       </div>
-      <button
-        onClick={onClose}
-        className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold
-          bg-primary-600 text-white hover:bg-primary-700 transition-colors"
-      >
-        Concluir
-      </button>
     </div>
   );
 }
@@ -839,6 +968,9 @@ export function ChannelSetupWizard({
   const [selectedBusinessUnitId, setSelectedBusinessUnitId] = useState<string>(
     initialBusinessUnitId || ''
   );
+
+  // Created channel (for webhook URL display)
+  const [createdChannelId, setCreatedChannelId] = useState<string | null>(null);
 
   // Test state
   const [isTestingConnection, setIsTestingConnection] = useState(false);
@@ -955,8 +1087,9 @@ export function ChannelSetupWizard({
         settings: verifyToken ? { verifyToken } : undefined,
       };
 
-      await createMutation.mutateAsync(input);
+      const created = await createMutation.mutateAsync(input);
 
+      setCreatedChannelId(created.id);
       setStep('complete');
       addToast('Canal criado com sucesso!', 'success');
     } catch (error) {
@@ -1074,7 +1207,7 @@ export function ChannelSetupWizard({
       )}
 
       {step === 'complete' && (
-        <CompleteStep channelName={channelName} onClose={handleClose} />
+        <CompleteStep channelName={channelName} channelId={createdChannelId} provider={provider} onClose={handleClose} />
       )}
     </Modal>
   );
