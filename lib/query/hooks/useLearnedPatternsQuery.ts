@@ -35,7 +35,7 @@ interface LearnResult {
 
 export function useLearnedPatternsQuery() {
   return useQuery({
-    queryKey: ['ai', 'learnedPatterns'],
+    queryKey: queryKeys.ai.learnedPatterns,
     queryFn: async (): Promise<LearnedPattern | null> => {
       const response = await fetch('/api/ai/learn');
 
@@ -77,7 +77,7 @@ export function useLearnMutation() {
     },
     onSettled: () => {
       // Invalidar queries relacionadas
-      queryClient.invalidateQueries({ queryKey: ['ai', 'learnedPatterns'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.ai.learnedPatterns });
       queryClient.invalidateQueries({ queryKey: queryKeys.ai.orgConfig() });
     },
   });
@@ -105,7 +105,7 @@ export function useClearPatternsMutation() {
     },
     onSettled: () => {
       // Invalidar queries relacionadas
-      queryClient.invalidateQueries({ queryKey: ['ai', 'learnedPatterns'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.ai.learnedPatterns });
       queryClient.invalidateQueries({ queryKey: queryKeys.ai.orgConfig() });
     },
   });

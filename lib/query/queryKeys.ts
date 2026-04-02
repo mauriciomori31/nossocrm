@@ -108,6 +108,9 @@ export const queryKeys = {
         /** Messages in a conversation (paginated) */
         byConversation: (conversationId: string, pagination?: PaginationState) =>
             [...base.all, 'byConversation', conversationId, pagination] as const,
+        /** Full-text search within a conversation */
+        search: (conversationId: string | undefined, term: string) =>
+            [...base.all, 'search', conversationId, term] as const,
     })),
 
     /**
@@ -186,6 +189,8 @@ export const queryKeys = {
         briefing: (dealId: string) => ['ai', 'briefing', dealId] as const,
         /** AI metrics for dashboard */
         metrics: (orgId: string) => ['ai', 'metrics', orgId] as const,
+        /** Learned patterns from few-shot learning */
+        learnedPatterns: ['ai', 'learnedPatterns'] as const,
     },
 
     /**

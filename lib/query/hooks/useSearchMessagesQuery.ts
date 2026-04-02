@@ -8,6 +8,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
+import { queryKeys } from '../queryKeys';
 
 interface SearchMessage {
   id: string;
@@ -34,7 +35,7 @@ export function useSearchMessagesQuery(
   }, [searchTerm]);
 
   return useQuery({
-    queryKey: ['messagingMessages', 'search', conversationId, debouncedTerm] as const,
+    queryKey: queryKeys.messagingMessages.search(conversationId, debouncedTerm),
     queryFn: async (): Promise<SearchMessage[]> => {
       const params = new URLSearchParams({
         conversationId: conversationId!,
