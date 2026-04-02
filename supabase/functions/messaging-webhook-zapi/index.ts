@@ -56,6 +56,14 @@ interface ZApiWebhookPayload {
   errorMessage?: string;
 }
 
+interface ZApiPresencePayload {
+  type: "PresenceChatCallback";
+  phone: string;
+  status: "AVAILABLE" | "UNAVAILABLE" | "COMPOSING" | "RECORDING" | "PAUSED";
+  lastSeen: string | null;
+  instanceId: string;
+}
+
 interface MessageContent {
   type: string;
   text?: string;
@@ -331,6 +339,11 @@ Deno.serve(async (req) => {
     if (String(channelSecret) !== String(secretHeader)) {
       return json(401, { error: "Secret inválido" });
     }
+  }
+
+  // Presence events — broadcast only, no DB write
+  if (payload.type === "PresenceChatCallback") {
+    return await handlePresenceEvent(supabase, channel, payload as unknown as ZApiPresencePayload);
   }
 
   // Generate stable event ID for deduplication
@@ -758,6 +771,54 @@ async function handleOutboundConfirmation(
     })
     .eq("external_id", externalMessageId)
     .is("sent_at", null);
+}
+
+async function handlePresenceEvent(
+  supabase: ReturnType<typeof createClient>,
+  channel: { id: string; organization_id: string },
+  payload: ZApiPresencePayload
+): Promise<Response> {
+  const phone = normalizePhone(payload.phone);
+  if (!phone) return json(200, { ok: true, skipped: "invalid_phone" });
+
+  // Only broadcast for contacts that exist AND have an open deal
+  const { data: contact } = await supabase
+    .from("contacts")
+    .select("id, name")
+    .eq("organization_id", channel.organization_id)
+    .eq("phone", phone)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (!contact) return json(200, { ok: true, skipped: "unknown_contact" });
+
+  // Check if contact has an open deal
+  const { count } = await supabase
+    .from("deals")
+    .select("id", { count: "exact", head: true })
+    .eq("contact_id", contact.id)
+    .eq("is_won", false)
+    .eq("is_lost", false);
+
+  if (!count || count === 0) return json(200, { ok: true, skipped: "no_open_deal" });
+
+  // Broadcast via Supabase Realtime (no DB write — presence is ephemeral)
+  const broadcastChannel = supabase.channel(`org:${channel.organization_id}:presence`);
+  await broadcastChannel.send({
+    type: "broadcast",
+    event: "presence",
+    payload: {
+      contactId: contact.id,
+      contactName: contact.name,
+      phone,
+      status: payload.status,
+      channelId: channel.id,
+      timestamp: Date.now(),
+    },
+  });
+  await supabase.removeChannel(broadcastChannel);
+
+  return json(200, { ok: true, event: "presence_broadcast", contact: contact.id, status: payload.status });
 }
 
 async function handleStatusUpdate(
