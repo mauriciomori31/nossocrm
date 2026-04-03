@@ -213,7 +213,8 @@ export function useUnreadCount() {
       if (error) throw error;
       return count || 0;
     },
-    staleTime: 10 * 1000, // 10 seconds - unread count should be fresh
+    staleTime: 60 * 1000, // 60s - realtime subscription handles live updates
+    refetchOnWindowFocus: false,
     enabled: !authLoading && !!user,
   });
 }

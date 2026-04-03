@@ -22,6 +22,54 @@ const makeSelectByBoard = (boardId: string) => (data: DealView[]) => {
   return data.filter(d => d.boardId === boardId);
 };
 
+/**
+ * Base queryFn para DEALS_VIEW_KEY.
+ *
+ * Extraída ao nível de módulo para ser reutilizada em:
+ * - useDealsView (sem filtros)
+ * - useDealsByBoard (filtra via select)
+ * - usePrefetchRoute (prefetch antecipado na navegação)
+ *
+ * Sempre produz DealView[] completo; filtragem é responsabilidade do caller.
+ */
+export const dealsViewQueryFn = async (
+  { signal }: { signal?: AbortSignal } = {}
+): Promise<DealView[]> => {
+  const [dealsResult, stagesResult] = await Promise.all([
+    dealsService.getAll({ signal }),
+    boardStagesService.getAll({ signal }),
+  ]);
+
+  if (dealsResult.error) throw dealsResult.error;
+
+  const deals = dealsResult.data || [];
+  const stages = stagesResult.data || [];
+
+  const contactIds = deals.map(d => d.contactId).filter(Boolean);
+  const companyIds = deals.map(d => d.clientCompanyId).filter(Boolean) as string[];
+
+  const [contactsResult, companiesResult] = await Promise.all([
+    contactsService.getByIds(contactIds, { signal }),
+    companiesService.getByIds(companyIds, { signal }),
+  ]);
+
+  const contactMap = new Map((contactsResult.data || []).map(c => [c.id, c]));
+  const companyMap = new Map((companiesResult.data || []).map(c => [c.id, c]));
+  const stageMap = new Map(stages.map(s => [s.id, s.label || s.name]));
+
+  return deals.map(deal => {
+    const contact = contactMap.get(deal.contactId);
+    const company = deal.clientCompanyId ? companyMap.get(deal.clientCompanyId) : undefined;
+    return {
+      ...deal,
+      companyName: company?.name || 'Sem empresa',
+      contactName: contact?.name || 'Sem contato',
+      contactEmail: contact?.email || '',
+      stageLabel: stageMap.get(deal.status) || 'Estágio não identificado',
+    };
+  });
+};
+
 export interface DealsFilters {
   boardId?: string;
   /** Stage id (UUID) do board_stages */
@@ -83,68 +131,24 @@ export const useDealsView = (filters?: DealsFilters) => {
       ? [...queryKeys.deals.list(filters as Record<string, unknown>), 'view']
       : [...queryKeys.deals.lists(), 'view'],
     queryFn: async ({ signal }) => {
-      // Step 1: Fetch deals and stages first (always needed)
-      const [dealsResult, stagesResult] = await Promise.all([
-        dealsService.getAll({ signal }),
-        boardStagesService.getAll({ signal }),
-      ]);
+      const deals = await dealsViewQueryFn({ signal });
+      if (!filters) return deals;
 
-      if (dealsResult.error) throw dealsResult.error;
-
-      const deals = dealsResult.data || [];
-      const stages = stagesResult.data || [];
-
-      // Step 2: Extract unique IDs referenced by deals (avoid fetching unused data)
-      const contactIds = deals.map(d => d.contactId).filter(Boolean);
-      const companyIds = deals.map(d => d.clientCompanyId).filter(Boolean) as string[];
-
-      // Step 3: Fetch only referenced contacts and companies in parallel
-      const [contactsResult, companiesResult] = await Promise.all([
-        contactsService.getByIds(contactIds, { signal }),
-        companiesService.getByIds(companyIds, { signal }),
-      ]);
-
-      const contacts = contactsResult.data || [];
-      const companies = companiesResult.data || [];
-
-      // Create lookup maps
-      const contactMap = new Map(contacts.map(c => [c.id, c]));
-      const companyMap = new Map(companies.map(c => [c.id, c]));
-      const stageMap = new Map(stages.map(s => [s.id, s.label || s.name]));
-
-      // Enrich deals with company/contact names and stageLabel
-      let enrichedDeals: DealView[] = deals.map(deal => {
-        const contact = contactMap.get(deal.contactId);
-        const company = deal.clientCompanyId ? companyMap.get(deal.clientCompanyId) : undefined;
-        return {
-          ...deal,
-          companyName: company?.name || 'Sem empresa',
-          contactName: contact?.name || 'Sem contato',
-          contactEmail: contact?.email || '',
-          stageLabel: stageMap.get(deal.status) || 'Estágio não identificado',
-        };
+      return deals.filter(deal => {
+        if (filters.boardId && deal.boardId !== filters.boardId) return false;
+        if (filters.status && deal.status !== filters.status) return false;
+        if (filters.minValue && deal.value < filters.minValue) return false;
+        if (filters.maxValue && deal.value > filters.maxValue) return false;
+        if (filters.search) {
+          const search = filters.search.toLowerCase();
+          if (
+            !(deal.title || '').toLowerCase().includes(search) &&
+            !(deal.companyName || '').toLowerCase().includes(search)
+          )
+            return false;
+        }
+        return true;
       });
-
-      // Apply client-side filters
-      if (filters) {
-        enrichedDeals = enrichedDeals.filter(deal => {
-          if (filters.boardId && deal.boardId !== filters.boardId) return false;
-          if (filters.status && deal.status !== filters.status) return false;
-          if (filters.minValue && deal.value < filters.minValue) return false;
-          if (filters.maxValue && deal.value > filters.maxValue) return false;
-          if (filters.search) {
-            const search = filters.search.toLowerCase();
-            if (
-              !(deal.title || '').toLowerCase().includes(search) &&
-              !(deal.companyName || '').toLowerCase().includes(search)
-            )
-              return false;
-          }
-          return true;
-        });
-      }
-
-      return enrichedDeals;
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
     enabled: !authLoading && !!user, // Only fetch when auth is ready
@@ -181,50 +185,7 @@ export const useDealsByBoard = (boardId: string) => {
   return useQuery<DealView[], Error, DealView[]>({
     // CRÍTICO: Usar a mesma query key que useDealsView para compartilhar cache
     queryKey: [...queryKeys.deals.lists(), 'view'],
-    queryFn: async ({ signal }) => {
-      // Step 1: Fetch deals and stages first
-      const [dealsResult, stagesResult] = await Promise.all([
-        dealsService.getAll({ signal }),
-        boardStagesService.getAll({ signal }),
-      ]);
-
-      if (dealsResult.error) throw dealsResult.error;
-
-      const deals = dealsResult.data || [];
-      const stages = stagesResult.data || [];
-
-      // Step 2: Extract unique IDs referenced by deals
-      const contactIds = deals.map(d => d.contactId).filter(Boolean);
-      const companyIds = deals.map(d => d.clientCompanyId).filter(Boolean) as string[];
-
-      // Step 3: Fetch only referenced contacts and companies
-      const [contactsResult, companiesResult] = await Promise.all([
-        contactsService.getByIds(contactIds, { signal }),
-        companiesService.getByIds(companyIds, { signal }),
-      ]);
-
-      const contacts = contactsResult.data || [];
-      const companies = companiesResult.data || [];
-
-      // Create lookup maps
-      const contactMap = new Map(contacts.map(c => [c.id, c]));
-      const companyMap = new Map(companies.map(c => [c.id, c]));
-      const stageMap = new Map(stages.map(s => [s.id, s.label || s.name]));
-
-      // Enrich ALL deals (filtering happens in select)
-      const enrichedDeals: DealView[] = deals.map(deal => {
-        const contact = contactMap.get(deal.contactId);
-        const company = deal.clientCompanyId ? companyMap.get(deal.clientCompanyId) : undefined;
-        return {
-          ...deal,
-          companyName: company?.name || 'Sem empresa',
-          contactName: contact?.name || 'Sem contato',
-          contactEmail: contact?.email || '',
-          stageLabel: stageMap.get(deal.status) || 'Estágio não identificado',
-        };
-      });
-      return enrichedDeals;
-    },
+    queryFn: ({ signal }) => dealsViewQueryFn({ signal }),
     // Filtrar por boardId no cliente (compartilha cache mas retorna só os deals do board)
     select: selectForBoard,
     staleTime: 2 * 60 * 1000, // 2 minutes (same as useDealsView)

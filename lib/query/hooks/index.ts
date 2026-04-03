@@ -81,6 +81,9 @@ export {
   useMoveDealSimple,
 } from './useMoveDeal';
 
+// Navigation prefetch
+export { usePrefetchRoute } from './usePrefetchRoute';
+
 // =============================================================================
 // MESSAGING MODULE
 // =============================================================================

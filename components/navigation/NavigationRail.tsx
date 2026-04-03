@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { PRIMARY_NAV, SECONDARY_NAV } from './navConfig';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { usePrefetchRoute } from '@/lib/query/hooks';
 
 export interface NavigationRailProps {
   /** Optional: used only if we want to keep "More" as a sheet trigger (mobile-like). */
@@ -12,6 +13,7 @@ export interface NavigationRailProps {
 
 export function NavigationRail({ onOpenMore }: NavigationRailProps) {
   const pathname = usePathname();
+  const prefetch = usePrefetchRoute();
 
   const isHrefActive = (href: string) =>
     pathname === href ||
@@ -45,6 +47,7 @@ export function NavigationRail({ onOpenMore }: NavigationRailProps) {
                 <TooltipTrigger asChild>
                   <Link
                     href={item.href!}
+                    onMouseEnter={() => prefetch(item.href!)}
                     className={cn(
                       'w-full h-12 rounded-xl flex items-center justify-center transition-colors focus-visible-ring',
                       isActive
@@ -76,6 +79,7 @@ export function NavigationRail({ onOpenMore }: NavigationRailProps) {
                 <TooltipTrigger asChild>
                   <Link
                     href={item.href}
+                    onMouseEnter={() => prefetch(item.href)}
                     className={cn(
                       'w-full h-12 rounded-xl flex items-center justify-center transition-colors focus-visible-ring',
                       isActive
