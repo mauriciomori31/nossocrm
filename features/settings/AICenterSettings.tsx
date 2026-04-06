@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useOrgSettings, useUpdateAISettings } from '@/lib/query/hooks/useOrgSettingsQuery';
 import { AIConfigSection } from './components/AIConfigSection';
 import { AIAgentConfigSection } from './components/ai/AIAgentConfigSection';
+import { TelegramNotificationSettings } from './components/ai/TelegramNotificationSettings';
 import { AIFeaturesSection } from './components/AIFeaturesSection';
 
 /**
@@ -63,6 +64,10 @@ export const AICenterSettings: React.FC = () => {
 
       <div className="mt-8">
         <AIAgentConfigSection />
+      </div>
+
+      <div className="mt-6">
+        <TelegramNotificationSettings />
       </div>
 
       <div className="mt-6">
