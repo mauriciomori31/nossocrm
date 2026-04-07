@@ -343,6 +343,8 @@ export interface Board {
   goal?: BoardGoal;
   agentPersona?: AgentPersona;
   entryTrigger?: string; // "Quem deve entrar aqui?"
+  /** Estágio limite do agente AI. NULL = sem limite (age até o fim do funil). */
+  agentGoalStageId?: string | null;
 
   createdAt: string;
 }

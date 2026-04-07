@@ -205,6 +205,7 @@ const transformBoard = (db: DbBoard, stages: DbBoardStage[]): Board => {
     goal,
     agentPersona,
     entryTrigger: db.entry_trigger || undefined,
+    agentGoalStageId: (db as any).agent_goal_stage_id ?? null,
     automationSuggestions: db.automation_suggestions || [],
     stages: stages
       .filter(s => s.board_id === db.id)
@@ -559,6 +560,7 @@ export const boardsService = {
       if (updates.lostStayInStage !== undefined) dbUpdates.lost_stay_in_stage = updates.lostStayInStage;
       if (updates.defaultProductId !== undefined) dbUpdates.default_product_id = sanitizeUUID(updates.defaultProductId as any);
       if (updates.entryTrigger !== undefined) dbUpdates.entry_trigger = updates.entryTrigger || null;
+      if (updates.agentGoalStageId !== undefined) (dbUpdates as any).agent_goal_stage_id = updates.agentGoalStageId || null;
       if (updates.automationSuggestions !== undefined) dbUpdates.automation_suggestions = updates.automationSuggestions || null;
 
 

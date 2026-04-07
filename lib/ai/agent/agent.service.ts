@@ -265,7 +265,7 @@ export async function processIncomingMessage(
   // 2. Buscar deal e stage
   const { data: deal } = await supabase
     .from('deals')
-    .select('id, stage_id')
+    .select('id, stage_id, board_id')
     .eq('id', dealId)
     .single();
 
@@ -299,6 +299,46 @@ export async function processIncomingMessage(
   }
 
   const config = stageConfig as StageAIConfig;
+
+  // 3b. Verificar escopo do agente (agent_goal_stage_id)
+  // Se o deal está além do estágio limite configurado no board, o agente não age.
+  if (deal.board_id) {
+    const { data: board } = await supabase
+      .from('boards')
+      .select('agent_goal_stage_id')
+      .eq('id', deal.board_id)
+      .single();
+
+    if (board?.agent_goal_stage_id) {
+      // Buscar a ordem do estágio atual e do estágio limite em paralelo
+      const [currentStageResult, goalStageResult] = await Promise.all([
+        supabase
+          .from('board_stages')
+          .select('"order"')
+          .eq('id', deal.stage_id)
+          .single(),
+        supabase
+          .from('board_stages')
+          .select('"order"')
+          .eq('id', board.agent_goal_stage_id)
+          .single(),
+      ]);
+
+      const currentOrder = currentStageResult.data?.order ?? null;
+      const goalOrder = goalStageResult.data?.order ?? null;
+
+      if (currentOrder !== null && goalOrder !== null && currentOrder > goalOrder) {
+        console.log('[AIAgent] Deal beyond agent scope (stage order %d > goal %d)', currentOrder, goalOrder);
+        return {
+          success: true,
+          decision: {
+            action: 'skipped',
+            reason: 'Fora do escopo do agente (estágio além do limite configurado)',
+          },
+        };
+      }
+    }
+  }
 
   // 4. Buscar configuração de AI e token budget em paralelo
   const [aiConfig, budgetCheck] = await Promise.all([
