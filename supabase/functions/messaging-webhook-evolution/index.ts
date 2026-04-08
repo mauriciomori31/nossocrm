@@ -277,8 +277,10 @@ Deno.serve(async (req) => {
   }
 
   // Extract channelId from URL path (multi-tenant auth pattern)
+  // Supports both /{channelId} and /{channelId}/{eventName} (webhookByEvents mode)
   const url = new URL(req.url);
-  const channelId = url.pathname.split("/").pop();
+  const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+  const channelId = url.pathname.match(uuidRegex)?.[0] ?? null;
   if (!channelId) {
     return json(400, { error: "channel_id ausente na URL" });
   }
