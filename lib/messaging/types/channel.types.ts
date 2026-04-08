@@ -28,7 +28,7 @@ export type ChannelType =
  * Maps channel type to array of provider names.
  */
 export const CHANNEL_PROVIDERS: Record<ChannelType, string[]> = {
-  whatsapp: ['z-api', 'meta-cloud'],
+  whatsapp: ['z-api', 'evolution', 'meta-cloud'],
   instagram: ['meta'],
   email: ['smtp', 'resend'],
   sms: ['twilio', 'vonage'],

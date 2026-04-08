@@ -116,6 +116,44 @@ const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
       '4. Cole os dados nos campos abaixo',
     ],
   },
+  'whatsapp:evolution': {
+    name: 'Evolution API',
+    description: 'Conexão não-oficial via WhatsApp Web usando Evolution API self-hosted.',
+    official: false,
+    fields: [
+      {
+        key: 'serverUrl',
+        label: 'URL do Servidor',
+        type: 'text',
+        placeholder: 'Ex: https://evolution.suaempresa.com',
+        required: true,
+        helpText: 'URL base da sua instância Evolution API.',
+      },
+      {
+        key: 'apiKey',
+        label: 'API Key',
+        type: 'password',
+        placeholder: 'Sua chave de API global',
+        required: true,
+        helpText: 'Chave de autenticação configurada no servidor Evolution API.',
+      },
+      {
+        key: 'instanceName',
+        label: 'Nome da Instância',
+        type: 'text',
+        placeholder: 'Ex: minha-empresa',
+        required: true,
+        helpText: 'Nome da instância criada no servidor Evolution API.',
+      },
+    ],
+    setupUrl: 'https://doc.evolution-api.com/',
+    setupInstructions: [
+      '1. Instale ou acesse seu servidor Evolution API',
+      '2. Crie uma instância no painel ou via API',
+      '3. Copie a URL do servidor e a API Key',
+      '4. Após salvar, configure o webhook apontando para a URL exibida',
+    ],
+  },
   'whatsapp:meta-cloud': {
     name: 'Meta Cloud API',
     description: 'API oficial da Meta. Requer verificação de negócio e templates aprovados.',
@@ -724,13 +762,21 @@ function TestStep({
         </div>
       </div>
 
-      {/* Z-API QR Code note */}
+      {/* Provider-specific connection notes */}
       {provider === 'z-api' && (
         <div className="p-4 rounded-xl bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/20">
           <p className="text-xs text-yellow-700 dark:text-yellow-300">
             <strong>Nota:</strong> Para Z-API, você precisará escanear o QR Code no
             painel da Z-API para completar a conexão. O teste aqui apenas verifica
             se as credenciais estão válidas.
+          </p>
+        </div>
+      )}
+      {provider === 'evolution' && (
+        <div className="p-4 rounded-xl bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/20">
+          <p className="text-xs text-yellow-700 dark:text-yellow-300">
+            <strong>Nota:</strong> Certifique-se de que a instância já está criada e
+            conectada no servidor Evolution API antes de salvar.
           </p>
         </div>
       )}
@@ -814,6 +860,17 @@ const WEBHOOK_INSTRUCTIONS: Record<string, { label: string; steps: string[]; doc
     ],
     docsUrl: 'https://developers.facebook.com/docs/messenger-platform/webhooks',
   },
+  'evolution': {
+    label: 'Evolution API',
+    steps: [
+      'Acesse o painel da sua instância Evolution API',
+      'Vá em Instâncias → sua instância → Webhooks',
+      'Cole a URL abaixo no campo "Webhook URL"',
+      'Ative os eventos: MESSAGES_UPSERT, MESSAGES_UPDATE, CONNECTION_UPDATE',
+      'Salve as configurações',
+    ],
+    docsUrl: 'https://doc.evolution-api.com/v2/pt/webhooks/webhook',
+  },
   'resend': {
     label: 'Resend',
     steps: [
@@ -830,6 +887,7 @@ function getWebhookUrl(provider: string, channelId: string): string {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   const functionMap: Record<string, string> = {
     'z-api': 'messaging-webhook-zapi',
+    'evolution': 'messaging-webhook-evolution',
     'meta-cloud': 'messaging-webhook-meta',
     'meta': 'messaging-webhook-meta',
     'resend': 'messaging-webhook-resend',
@@ -1007,8 +1065,10 @@ export function ChannelSetupWizard({
     if (!config) return false;
 
     if (!channelName.trim()) return false;
-    // External identifier is optional for meta-cloud (will be fetched from API)
-    if (provider !== 'meta-cloud' && !externalIdentifier.trim()) return false;
+    // External identifier is optional for meta-cloud (fetched from API) and
+    // evolution (auto-populated from instanceName credential)
+    const identifierOptional = provider === 'meta-cloud' || provider === 'evolution';
+    if (!identifierOptional && !externalIdentifier.trim()) return false;
 
     return config.fields
       .filter((f) => f.required)
@@ -1068,10 +1128,13 @@ export function ChannelSetupWizard({
     if (!channelType || !provider || !selectedBusinessUnitId) return;
 
     try {
-      // For meta-cloud, use phoneNumberId as fallback if externalIdentifier is empty
+      // For meta-cloud/evolution, auto-populate externalIdentifier from credentials
       let identifier = externalIdentifier.trim();
       if (!identifier && provider === 'meta-cloud') {
         identifier = credentials.phoneNumberId || 'pending';
+      }
+      if (!identifier && provider === 'evolution') {
+        identifier = credentials.instanceName || 'pending';
       }
 
       // Move verifyToken from credentials to settings (it's not a secret)
