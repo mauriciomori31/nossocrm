@@ -346,7 +346,7 @@ Deno.serve(async (req) => {
     if (eventNorm === "messages.upsert") {
       await handleMessagesUpsert(supabase, channel, payload as EvolutionUpsertPayload);
     } else if (eventNorm === "messages.update") {
-      await handleMessagesUpdate(supabase, payload as EvolutionUpdatePayload);
+      await handleMessagesUpdate(supabase, channel, payload as EvolutionUpdatePayload);
     } else if (eventNorm === "connection.update") {
       await handleConnectionUpdate(supabase, channel, payload as EvolutionConnectionUpdatePayload);
     } else {
@@ -565,6 +565,7 @@ async function handleMessagesUpsert(
 
 async function handleMessagesUpdate(
   supabase: ReturnType<typeof createClient>,
+  channel: { id: string },
   payload: EvolutionUpdatePayload
 ) {
   const updates = payload.data;
@@ -584,6 +585,19 @@ async function handleMessagesUpdate(
       continue;
     }
 
+    // Scope update to this channel (tenant isolation — defense-in-depth beyond RLS)
+    const { data: msgRow } = await supabase
+      .from("messaging_messages")
+      .select("id, messaging_conversations!inner(channel_id)")
+      .eq("external_id", externalId)
+      .eq("messaging_conversations.channel_id", channel.id)
+      .maybeSingle();
+
+    if (!msgRow) {
+      console.log(`[Evolution] Status update ignored: message ${externalId} not found in channel ${channel.id}`);
+      continue;
+    }
+
     const { error } = await supabase
       .from("messaging_messages")
       .update({
@@ -591,7 +605,7 @@ async function handleMessagesUpdate(
         ...(newStatus === "delivered" ? { delivered_at: new Date().toISOString() } : {}),
         ...(newStatus === "read" ? { read_at: new Date().toISOString() } : {}),
       })
-      .eq("external_id", externalId);
+      .eq("id", (msgRow as { id: string }).id);
 
     if (error) {
       console.error(`[Evolution] Error updating status for ${externalId}:`, error);

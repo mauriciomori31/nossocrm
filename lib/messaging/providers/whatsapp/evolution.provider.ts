@@ -21,6 +21,7 @@ import type {
   SendMessageResult,
   WebhookHandlerResult,
   MessageReceivedEvent,
+  MessageSentEvent,
   StatusUpdateEvent,
   ConnectionUpdateEvent,
   ErrorEvent,
@@ -578,15 +579,23 @@ export class EvolutionWhatsAppProvider extends BaseChannelProvider {
       return { type: 'error', data: errorData, raw: originalPayload };
     }
 
-    // Ignore messages sent by us
+    // fromMe=true: outbound echo (message sent from the phone/app).
+    // Return message_sent so the channel router can store it as direction='outbound'.
     if (data.key?.fromMe) {
-      const errorData: ErrorEvent = {
-        type: 'error',
-        code: 'OUTBOUND_MESSAGE',
-        message: 'Ignoring outbound message echo',
-        timestamp: new Date(),
+      const sentEventData: MessageSentEvent = {
+        type: 'message_sent',
+        externalMessageId: data.key?.id ?? '',
+        status: 'sent',
+        timestamp: data.messageTimestamp
+          ? new Date(data.messageTimestamp * 1000)
+          : new Date(),
       };
-      return { type: 'error', data: errorData, raw: originalPayload };
+      return {
+        type: 'message_sent',
+        externalId: data.key?.id ?? '',
+        data: sentEventData,
+        raw: originalPayload,
+      };
     }
 
     const remoteJid = data.key?.remoteJid ?? '';
@@ -668,9 +677,10 @@ export class EvolutionWhatsAppProvider extends BaseChannelProvider {
     const connData = raw.data as { state?: string } | undefined;
     const stateRaw = connData?.state ?? 'close';
 
-    const stateToChannelStatus: Record<string, 'connected' | 'connecting' | 'disconnected' | 'error'> = {
+    // 'connecting' is intentionally omitted — writing that status breaks subsequent webhook
+    // lookups (channel query filters by status IN ('connected', 'active') only).
+    const stateToChannelStatus: Record<string, 'connected' | 'disconnected' | 'error'> = {
       open: 'connected',
-      connecting: 'connecting',
       close: 'disconnected',
       refused: 'error',
     };
