@@ -190,7 +190,8 @@ Avalie cada critério de avanço e decida se o lead deve avançar para o próxim
     if (tokensUsed > 0) {
       supabase.from('ai_conversation_log').insert({
         organization_id: organizationId,
-        conversation_id: params.conversationId ?? null,
+        conversation_id: params.conversationId,
+        context_snapshot: {},
         tokens_used: tokensUsed,
         model_used: aiConfig.model,
         action_taken: 'stage_evaluation',

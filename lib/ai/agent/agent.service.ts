@@ -451,6 +451,11 @@ export async function processIncomingMessage(
     };
   }
 
+  // 8.5. Aplicar delay de resposta (simula tempo humano de digitação)
+  if (config.settings.response_delay_seconds > 0) {
+    await new Promise<void>((r) => setTimeout(r, config.settings.response_delay_seconds * 1000));
+  }
+
   // 9. Gerar resposta usando configuração de AI do banco
   const decision = await generateResponse({
     context,
